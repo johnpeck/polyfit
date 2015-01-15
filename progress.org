@@ -1,0 +1,16 @@
+#+CATEGORY: polyfit
+* polyfit project progress
+* ---------------------------- Dated notes ----------------------------
+* <2015-01-15 Thu> Created this project
+* ----------------------------- TODO list -----------------------------
+* Work on polyfit
+** TODO Create associative array to store plot data
+   - Call the array plotdata.  I'll have plotdata(name), plotdata(data).
+* Work on executables
+
+
+
+
+
+
+

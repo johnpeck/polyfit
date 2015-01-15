@@ -135,41 +135,29 @@ if {[file exists $configfile] == 0} {
     ini::close $fcon
 }
 
-proc plotdata {name twocoldata} {
-    # Plots frequency response data
-    #
-    # Arguments:
-    #   name -- Name string for the data
-    #   twocoldata -- frequency (whitespace) response data
-    set s [::Plotchart::createLogXYPlot .plot_cnvs {10 10000 1000} {0.0 10.0 2.0}]
-    foreach line [split $twocoldata "\n"] {
-	set xdatum [lindex [split $line] 0]
-	set ydatum [lindex [split $line] 1]
-        $s plot series1 $xdatum $ydatum
-    }
-    $s title $name  
-}
+
 
 # -------------------- Datafile selection boxes -----------------------
 
 set fileiconfile ./icons/calc_16x16.png
 set fileicon [image create photo -format png -file $fileiconfile]
 
-proc getfile {filevar} {
+
+proc getfile {platform} {
     # Sets a global variable to a filename chosen via a dialog box.
     #
     # Arguments:
-    #   filevar -- Either anecfilename or testfilename
-    global $filevar
+    #   platform -- Either freefield or tester
     global log
+    global plotdata
     set fopen [tk_getOpenFile]
-    set $filevar $fopen
-    ${log}::debug "Opening $filevar"
-    .${filevar}_enty delete 0 end
-    .${filevar}_enty insert 0 [file tail $fopen]
+    ${log}::debug "Opening $fopen"
+    .${platform}_enty delete 0 end
+    .${platform}_enty insert 0 [file tail $fopen]
     set fp [open $fopen r]
     set rawdata [read $fp]
-    plotdata $filevar $rawdata
+    dict set plotdata $platform $rawdata
+    plotall
     close $fp
 }
 
@@ -185,24 +173,24 @@ proc calculate {} {
     plotdata
 }
 
-# Anechoic filename entry
-ttk::labelframe .anecfile_frme -text "Free-field data"\
+# Free field filename entry
+ttk::labelframe .freefield_frme -text "Free-field data"\
     -labelanchor n\
     -borderwidth 1\
     -relief sunken
-button .anecfile_butt -image $fileicon \
-    -command "getfile anecfilename"
-ttk::entry .anecfilename_enty \
+button .freefield_butt -image $fileicon \
+    -command "getfile freefield"
+ttk::entry .freefield_enty \
     -width 20
 
 # Tester filename entry
-ttk::labelframe .testfile_frme -text "Tester data"\
+ttk::labelframe .tester_frme -text "Tester data"\
     -labelanchor n\
     -borderwidth 1\
     -relief sunken
-button .testfile_butt -image $fileicon \
-    -command "getfile testfilename"
-ttk::entry .testfilename_enty \
+button .tester_butt -image $fileicon \
+    -command "getfile tester"
+ttk::entry .tester_enty \
     -width 20
 
 # Calculate button
@@ -213,10 +201,41 @@ button .calc_butt -text "Calculate" \
 package require Plotchart
 ${log}::info [modinfo inifile]
 
-canvas .plot_cnvs -background white -width 400 -height 200
+canvas .plot_cnvs -background white -width 600 -height 200
 
+# Create a dictionary to hold plot data
+# freefield: free field data
+# tester: tester data
+# corrected: corrected tester data
+set plotdata [dict create]
 
+set curveplot [::Plotchart::createLogXYPlot .plot_cnvs {10 30000} {-1 10 2}]
+$curveplot dataconfig freefield -color "blue"
+$curveplot dataconfig tester -color "red"
+$curveplot dataconfig corrected -color "green"
+$curveplot xtext "Frequency (Hz)"
+$curveplot xconfig -format "%0.0f"
+$curveplot ytext "Response (dB)"
 
+proc plotall {} {
+    # Plots frequency response data
+    #
+    # Arguments:
+    #   none
+    global plotdata
+    global curveplot
+    foreach entry [dict keys $plotdata] {
+	foreach line [split [dict get $plotdata $entry] "\n"] {
+	    if {[string index $line 0] == {#}} {
+		# Skip commented lines
+		continue
+	    }
+	    set xdatum [lindex [split $line] 0]
+	    set ydatum [lindex [split $line] 1]
+	    $curveplot plot $entry $xdatum $ydatum
+	}
+    }
+}
 
 
 
@@ -224,23 +243,23 @@ canvas .plot_cnvs -background white -width 400 -height 200
 
 
 
-pack .anecfile_frme
+pack .freefield_frme
 
-pack .anecfile_butt -in .anecfile_frme \
+pack .freefield_butt -in .freefield_frme \
     -side left \
     -padx {5 0}
 
-pack .anecfilename_enty -in .anecfile_frme \
+pack .freefield_enty -in .freefield_frme \
     -side right \
     -padx {0 5}
 
-pack .testfile_frme
+pack .tester_frme
 
-pack .testfile_butt -in .testfile_frme \
+pack .tester_butt -in .tester_frme \
     -side left \
     -padx {5 0}
 
-pack .testfilename_enty -in .testfile_frme \
+pack .tester_enty -in .tester_frme \
     -side right \
     -padx {0 5}
 
